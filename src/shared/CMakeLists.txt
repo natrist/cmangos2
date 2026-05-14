@@ -224,6 +224,7 @@ target_include_directories(${LIBRARY_NAME}
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC cmangos-compile-option-interface)
+target_link_libraries(${LIBRARY_NAME} PRIVATE g3dlite)
 
 if(UNIX)
   target_link_libraries(${LIBRARY_NAME}
