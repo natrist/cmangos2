@@ -268,6 +268,7 @@ class WorldSession
         void SizeError(WorldPacket const& packet, uint32 size) const;
 
         void SendPacket(WorldPacket const& packet) const;
+        void SendPermissionFailure();
         void SendExpectedSpamRecords();
         void SendMotd();
         void SendOfflineNameQueryResponses();
