@@ -341,6 +341,22 @@ class ByteBuffer
                 throw ByteBufferException(false, _rpos, value.length(), size());
         }
 
+        ByteBuffer& GetString(char* pval, uint32_t maxChars)
+        {
+            MANGOS_ASSERT(maxChars > 0);
+            uint32_t written = 0;
+            while (rpos() < size())
+            {
+                char c = read<char>();
+                if (c == 0)
+                    break;
+                if (written + 1 < maxChars)
+                    pval[written++] = c;
+            }
+            pval[written] = 0;
+            return *this;
+        }
+
         uint64 readPackGUID()
         {
             uint64 guid = 0;
