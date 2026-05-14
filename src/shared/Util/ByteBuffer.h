@@ -357,6 +357,12 @@ class ByteBuffer
             return *this;
         }
 
+        ByteBuffer& PutString(const char* pval)
+        {
+            *this << pval;
+            return *this;
+        }
+
         uint64 readPackGUID()
         {
             uint64 guid = 0;
