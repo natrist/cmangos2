@@ -4885,15 +4885,19 @@ void Player::BuildPlayerRepop()
     // there must be SMSG.STOP_MIRROR_TIMER
     // there we must send 888 opcode
 
+    Corpse* corpse = GetCorpse();
+
     // the player cannot have a corpse already, only bones which are not returned by GetCorpse
-    if (GetCorpse())
+    if (corpse)
     {
-        sLog.outError("BuildPlayerRepop: player %s(%d) already has a corpse", GetName(), GetGUIDLow());
-        MANGOS_ASSERT(false);
+        //sLog.outError("BuildPlayerRepop: player %s(%d) already has a corpse", GetName(), GetGUIDLow());
+        //MANGOS_ASSERT(false);
+
+        corpse->DestroyOnClientsIAmAt();
     }
 
     // create a corpse and place it at the player's location
-    Corpse* corpse = CreateCorpse();
+    corpse = CreateCorpse();
     if (!corpse)
     {
         sLog.outError("Error creating corpse for Player %s [%u]", GetName(), GetGUIDLow());
