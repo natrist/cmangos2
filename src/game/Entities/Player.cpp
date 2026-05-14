@@ -7706,20 +7706,20 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea, bool force)
     if (!zone)
         return;
 
-    bool updateZone = m_zoneUpdateId != newZone || force;
-    if (updateZone)
+    bool zoneChanged = m_zoneUpdateId != newZone;
+    if (zoneChanged || force)
     {
         // handle outdoor pvp zones
         sOutdoorPvPMgr.HandlePlayerLeaveZone(this, m_zoneUpdateId);
         sWorldState.HandlePlayerLeaveZone(this, m_zoneUpdateId);
         sOutdoorPvPMgr.HandlePlayerEnterZone(this, newZone);
         sWorldState.HandlePlayerEnterZone(this, newZone);
+    }
 
-        if (sWorld.getConfig(CONFIG_BOOL_WEATHER))
-        {
-            Weather* wth = GetMap()->GetWeatherSystem()->FindOrCreateWeather(newZone);
-            wth->SendWeatherUpdateToPlayer(this);
-        }
+    if (zoneChanged && sWorld.getConfig(CONFIG_BOOL_WEATHER))
+    {
+        Weather* wth = GetMap()->GetWeatherSystem()->FindOrCreateWeather(newZone);
+        wth->SendWeatherUpdateToPlayer(this);
     }
 
     bool updateArea = m_areaUpdateId != newArea || force;
@@ -7731,8 +7731,8 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea, bool force)
         sWorldState.HandlePlayerEnterArea(this, newArea);
     }
 
-    if (updateZone || updateArea)
-        GetMap()->SendZoneDynamicInfo(this, updateZone, updateArea);
+    if (zoneChanged || updateArea)
+        GetMap()->SendZoneDynamicInfo(this, zoneChanged, updateArea);
 
     m_zoneUpdateId    = newZone;
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
