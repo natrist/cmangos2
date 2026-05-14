@@ -260,6 +260,12 @@ void WorldSession::SendPacket(WorldPacket const& packet) const
     m_socket->SendPacket(packet);
 }
 
+//=============================================================================
+void WorldSession::SendPermissionFailure()
+{
+    SendNotification("You do not have permission to perform that function");
+}
+
 /// Add an incoming packet to the queue
 void WorldSession::QueuePacket(std::unique_ptr<WorldPacket> new_packet)
 {
