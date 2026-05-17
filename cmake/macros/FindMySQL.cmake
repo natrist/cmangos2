@@ -9,6 +9,7 @@
 
 # also defined, but not for general use are
 # MYSQL_LIBRARY, where to find the MySQL library.
+# MYSQL_EXTRA_LIBRARIES, transitive dependencies of the client library.
 
 set( MYSQL_FOUND 0 )
 
@@ -61,7 +62,7 @@ if( UNIX )
     endforeach(LIB ${MYSQL_LIBS})
 
   else( MYSQL_CONFIG )
-    set(MYSQL_ADD_LIBRARIES "mysqlclient")
+    set(MYSQL_ADD_LIBRARIES "mysqlclient" "z")
   endif( MYSQL_CONFIG )
 endif( UNIX )
 
@@ -99,29 +100,40 @@ find_path(MYSQL_INCLUDE_DIR
 )
 
 if( UNIX )
-foreach(LIB ${MYSQL_ADD_LIBRARIES})
-  find_library( MYSQL_LIBRARY
-    NAMES
-      mysql libmysql ${LIB}
-    PATHS
-      ${MYSQL_ADD_LIBRARIES_PATH}
-      /usr/lib
-      /usr/lib/mysql
-      /usr/local/lib
-      /usr/local/lib/mysql
-      /usr/local/mysql/lib
-      /usr/local/mysql/lib/mysql
-      /usr/local/opt/mysql/lib
-      /usr/local/opt/mysql-client/lib
-      /opt/homebrew/opt/mysql-client
-      /opt/homebrew/opt/mysql-client/lib
-      /opt/homebrew/opt/mysql-client@8.4
-      /opt/homebrew/opt/mysql-client@8.4/lib
-      /opt/mysql/mysql/lib
-      /opt/mysql/mysql/lib/mysql
-    DOC "Specify the location of the mysql library here."
+  link_directories(${MYSQL_ADD_LIBRARIES_PATH} /usr/local/lib)
+
+  set(MYSQL_CLIENT_NAMES
+    mysql libmysql
+    mysqlclient mysqlclient_r
+    mariadb mariadbclient
+    perconaserverclient perconaserverclient_r
   )
-endforeach(LIB ${MYSQL_ADD_LIBRARY})
+
+  set(MYSQL_EXTRA_LIBRARIES "")
+  foreach(LIB ${MYSQL_ADD_LIBRARIES})
+    list(FIND MYSQL_CLIENT_NAMES "${LIB}" _is_client)
+    if(NOT _is_client EQUAL -1)
+      find_library( MYSQL_LIBRARY
+        NAMES
+          mysql libmysql ${LIB}
+        PATHS
+          ${MYSQL_ADD_LIBRARIES_PATH}
+          /usr/lib
+          /usr/lib/mysql
+          /usr/local/lib
+          /usr/local/lib/mysql
+          /usr/local/mysql/lib
+          /usr/local/mysql/lib/mysql
+          /usr/local/opt/mysql/lib
+          /usr/local/opt/mysql-client/lib
+          /opt/mysql/mysql/lib
+          /opt/mysql/mysql/lib/mysql
+        DOC "Specify the location of the mysql library here."
+      )
+    else()
+      list(APPEND MYSQL_EXTRA_LIBRARIES "${LIB}")
+    endif()
+  endforeach()
 endif( UNIX )
 
 if( WIN32 )
@@ -143,32 +155,20 @@ if( WIN32 )
   )
 endif( WIN32 )
 
-# On Windows you typically don't need to include any extra libraries
-# to build MYSQL stuff.
-
-if( NOT WIN32 )
-  find_library( MYSQL_EXTRA_LIBRARIES
-    NAMES
-      z zlib
-    PATHS
-      /usr/lib
-      /usr/local/lib
-    DOC
-      "if more libraries are necessary to link in a MySQL client (typically zlib), specify them here."
-  )
-else( NOT WIN32 )
+if( WIN32 )
   set( MYSQL_EXTRA_LIBRARIES "" )
-endif( NOT WIN32 )
+endif( WIN32 )
 
 if( MYSQL_LIBRARY )
   if( MYSQL_INCLUDE_DIR )
     set( MYSQL_FOUND 1 )
+    set( MYSQL_LIBRARIES ${MYSQL_LIBRARY} ${MYSQL_EXTRA_LIBRARIES} )
     message(STATUS "Found MySQL library: ${MYSQL_LIBRARY}")
     message(STATUS "Found MySQL headers: ${MYSQL_INCLUDE_DIR}")
   else( MYSQL_INCLUDE_DIR )
       message(FATAL_ERROR "Could not find MySQL headers! Please install the development-libraries and headers.")
   endif( MYSQL_INCLUDE_DIR )
-  mark_as_advanced( MYSQL_FOUND MYSQL_LIBRARY MYSQL_EXTRA_LIBRARIES MYSQL_INCLUDE_DIR )
+  mark_as_advanced( MYSQL_FOUND MYSQL_LIBRARY MYSQL_LIBRARIES MYSQL_EXTRA_LIBRARIES MYSQL_INCLUDE_DIR )
 else( MYSQL_LIBRARY )
   message(FATAL_ERROR "Could not find the MySQL libraries! Please install the development-libraries and headers.")
 endif( MYSQL_LIBRARY )
