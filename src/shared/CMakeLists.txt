@@ -251,7 +251,7 @@ elseif(SQLITE AND SQLite3_FOUND)
   target_link_libraries(${LIBRARY_NAME} PUBLIC ${SQLite3_LIBRARIES})
 else()
   target_include_directories(${LIBRARY_NAME} PUBLIC ${MYSQL_INCLUDE_DIR})
-  target_link_libraries(${LIBRARY_NAME} PUBLIC ${MYSQL_LIBRARY})
+  target_link_libraries(${LIBRARY_NAME} PUBLIC ${MYSQL_LIBRARY} ${MYSQL_EXTRA_LIBRARIES})
   if (WIN32)
     # Add provided dependency lib to dev folder
     string(REGEX REPLACE "/" "\\\\" LibFolder ${DEV_PROVIDED_LIBS_FOLDER})
