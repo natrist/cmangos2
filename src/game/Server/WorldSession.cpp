@@ -125,6 +125,15 @@ WorldSession::~WorldSession()
     }
 }
 
+Player* WorldSession::ActivePlayerPtr() const {
+    Player* player = GetPlayer();
+
+    if (player && player->IsInWorld())
+        return player;
+
+    return nullptr;
+}
+
 void WorldSession::SetOffline()
 {
     if (_player)
