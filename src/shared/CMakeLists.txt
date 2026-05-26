@@ -243,6 +243,53 @@ else()
   )
 endif()
 
+# Some Boost installations (especially Homebrew on macOS) pull in ICU
+# transitively via Boost::regex. Boost's interface dependencies frequently
+# emit bare "-licudata -licui18n -licuuc" without any -L path.
+# We must therefore:
+#   1. Add the ICU library directory (propagates to realmd/mangosd).
+#   2. Link the ICU libraries (preferably via imported targets, which produce
+#      better/fully-qualified output).
+#   3. Add the include dirs for good measure.
+if(ICU_FOUND)
+  if(ICU_LIBRARY_DIRS)
+    target_link_directories(${LIBRARY_NAME} PUBLIC ${ICU_LIBRARY_DIRS})
+  elseif(APPLE)
+    # Extra safety net for the most common Homebrew layout
+    target_link_directories(${LIBRARY_NAME} PUBLIC
+      "/opt/homebrew/opt/icu4c/lib"
+      "/usr/local/opt/icu4c/lib"
+    )
+  endif()
+
+  # Prefer imported targets when available (CMake 3.7+ / FindICU)
+  if(TARGET ICU::data AND TARGET ICU::i18n AND TARGET ICU::uc)
+    target_link_libraries(${LIBRARY_NAME} PUBLIC ICU::data ICU::i18n ICU::uc)
+  elseif(ICU_LIBRARIES)
+    target_link_libraries(${LIBRARY_NAME} PUBLIC ${ICU_LIBRARIES})
+  endif()
+
+  if(ICU_INCLUDE_DIRS)
+    target_include_directories(${LIBRARY_NAME} PUBLIC ${ICU_INCLUDE_DIRS})
+  endif()
+endif()
+
+# zstd (and potentially other libs) can be pulled in transitively by the
+# MySQL client library on Homebrew/macOS and some Linux setups.
+# MYSQL_EXTRA_LIBRARIES often contains bare "zstd", so we need the search path.
+if(ZSTD_LIBRARY_DIR)
+  target_link_directories(${LIBRARY_NAME} PUBLIC "${ZSTD_LIBRARY_DIR}")
+elseif(APPLE)
+  # Common Homebrew fallback
+  target_link_directories(${LIBRARY_NAME} PUBLIC
+    "/opt/homebrew/opt/zstd/lib"
+    "/usr/local/opt/zstd/lib"
+  )
+endif()
+if(ZSTD_LIBRARIES)
+  target_link_libraries(${LIBRARY_NAME} PUBLIC ${ZSTD_LIBRARIES})
+endif()
+
 if(POSTGRESQL AND POSTGRESQL_FOUND)
   target_include_directories(${LIBRARY_NAME} PUBLIC ${PostgreSQL_INCLUDE_DIRS})
   target_link_libraries(${LIBRARY_NAME} PUBLIC ${PostgreSQL_LIBRARIES})
