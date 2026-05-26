@@ -230,6 +230,43 @@ if(NOT Boost_FOUND AND (BUILD_GAME_SERVER OR BUILD_LOGIN_SERVER))
   message(FATAL_ERROR "This project requires boost.  Please install from http://www.boost.org")
 endif()
 
+# Some Boost installations (especially Homebrew on macOS, and certain Linux packages)
+# build the 'regex' component against ICU for Unicode support. When this happens
+# the generated link line contains bare "-licudata -licui18n -licuuc" flags, but
+# no corresponding -L search path is added by the Boost find module. This causes
+# "ld: library 'icudata' not found" (and similar) on link of realmd / mangosd.
+#
+# We therefore explicitly locate ICU on Unix so that its libraries (with proper
+# paths) can be injected into the link command for the shared library.
+if(UNIX AND (BUILD_GAME_SERVER OR BUILD_LOGIN_SERVER))
+  find_package(ICU QUIET COMPONENTS uc i18n data)
+
+  # Homebrew keeps icu4c keg-only; the standard find often needs help on macOS.
+  if(NOT ICU_FOUND AND APPLE)
+    list(APPEND CMAKE_PREFIX_PATH
+      "/opt/homebrew/opt/icu4c"
+      "/usr/local/opt/icu4c"
+    )
+    find_package(ICU QUIET COMPONENTS uc i18n data)
+  endif()
+
+  if(ICU_FOUND)
+    message(STATUS "Found ICU ${ICU_VERSION} (required by some Boost::regex installations)")
+
+    # Many FindICU versions do not populate ICU_LIBRARY_DIRS. Derive it so we
+    # can emit a proper -L path for the bare -licudata flags that Boost injects.
+    if(NOT ICU_LIBRARY_DIRS AND ICU_LIBRARIES)
+      foreach(_icu_lib IN LISTS ICU_LIBRARIES)
+        get_filename_component(_icu_dir "${_icu_lib}" DIRECTORY)
+        if(_icu_dir)
+          list(APPEND ICU_LIBRARY_DIRS "${_icu_dir}")
+          break()
+        endif()
+      endforeach()
+    endif()
+  endif()
+endif()
+
 # Win32 delivered packages
 if(WIN32 AND (BUILD_GAME_SERVER OR BUILD_LOGIN_SERVER OR BUILD_EXTRACTORS))
   if(SQLITE)
@@ -260,6 +297,23 @@ if(UNIX AND (BUILD_GAME_SERVER OR BUILD_LOGIN_SERVER OR BUILD_EXTRACTORS))
     find_package(SQLite3 REQUIRED)
   else()
     find_package(MySQL REQUIRED)
+  endif()
+
+  # zstd is a common transitive dependency of modern Homebrew (and some Linux)
+  # MySQL/MariaDB packages. mysql_config often emits bare "-lzstd" without a
+  # corresponding -L path, exactly like the Boost+ICU problem.
+  find_library(ZSTD_LIBRARY NAMES zstd libzstd
+    PATHS
+      /opt/homebrew/opt/zstd/lib
+      /usr/local/opt/zstd/lib
+      /opt/homebrew/lib
+      /usr/local/lib
+      /usr/lib
+  )
+  if(ZSTD_LIBRARY)
+    get_filename_component(ZSTD_LIBRARY_DIR "${ZSTD_LIBRARY}" DIRECTORY)
+    set(ZSTD_LIBRARIES ${ZSTD_LIBRARY})
+    message(STATUS "Found zstd (required by some MySQL installations): ${ZSTD_LIBRARY}")
   endif()
 
   find_package(OpenSSL REQUIRED)
