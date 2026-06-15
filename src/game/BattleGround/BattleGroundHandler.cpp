@@ -542,7 +542,7 @@ void WorldSession::HandleBattlefieldPortOpcode(WorldPacket& recv_data)
                     // resurrect the player
                     if (!player->IsAlive())
                     {
-                        player->ResurrectPlayer(1.0f);
+                        player->Resurrect(1.0f);
                         player->SpawnCorpseBones();
                     }
 
