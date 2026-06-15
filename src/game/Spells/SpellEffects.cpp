@@ -11226,7 +11226,7 @@ void Spell::EffectSelfResurrect(SpellEffectIndex eff_idx)
             mana = uint32(damage / 100.0f * player->GetMaxPower(POWER_MANA));
     }
 
-    player->ResurrectPlayer(0.0f);
+    player->Resurrect(0.0f);
 
     player->SetHealth(health);
     player->SetPower(POWER_MANA, mana);
@@ -11753,7 +11753,7 @@ void Spell::EffectSpiritHeal(SpellEffectIndex /*eff_idx*/)
 #ifdef ENABLE_PLAYERBOTS
         player->RemoveAurasDueToSpell(2584);
 #endif
-        player->ResurrectPlayer(1.0f);
+        player->Resurrect(1.0f);
         player->SpawnCorpseBones();
 
         if (player->getClass() == CLASS_HUNTER)
