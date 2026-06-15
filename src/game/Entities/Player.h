@@ -1987,12 +1987,13 @@ class Player : public Unit
         void SendMessageToSetInRange(WorldPacket const& data, float dist, bool self, bool own_team_only) const;
         void SendMessageToAllWhoSeeMe(WorldPacket const& data, bool self) const override;
 
+        void ApplyResurrectionSickness();
         Corpse* GetCorpse() const;
         void SpawnCorpseBones();
         Corpse* CreateCorpse();
         void KillPlayer();
         uint32 GetResurrectionSpellId() const;
-        void ResurrectPlayer(float restore_percent, bool applySickness = false);
+        void Resurrect(float restore_percent);
         void BuildPlayerRepop();
         void RepopAtGraveyard();
         std::pair<bool, AreaTrigger const*> CheckAndRevivePlayerOnDungeonEnter(MapEntry const* targetMapEntry, uint32 targetMapId);
