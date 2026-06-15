@@ -732,8 +732,6 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_CORPSE_DECAY_RAREELITE,                   "Corpse.Decay.RAREELITE",                1200);
     setConfig(CONFIG_UINT32_CORPSE_DECAY_WORLDBOSS,                   "Corpse.Decay.WORLDBOSS",                3600);
 
-    setConfig(CONFIG_INT32_DEATH_SICKNESS_LEVEL, "Death.SicknessLevel", 11);
-
     setConfig(CONFIG_BOOL_DEATH_CORPSE_RECLAIM_DELAY_PVP, "Death.CorpseReclaimDelay.PvP", true);
     setConfig(CONFIG_BOOL_DEATH_CORPSE_RECLAIM_DELAY_PVE, "Death.CorpseReclaimDelay.PvE", true);
     setConfig(CONFIG_BOOL_DEATH_BONES_WORLD,              "Death.Bones.World", true);
