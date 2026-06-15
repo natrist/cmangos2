@@ -408,7 +408,7 @@ struct spell_end_of_round : public SpellScript
         Player* player = static_cast<Player*>(target);
 
         // resurrect dead players
-        player->ResurrectPlayer(1.0f);
+        player->Resurrect(1.0f);
         player->SpawnCorpseBones();
     }
 };
