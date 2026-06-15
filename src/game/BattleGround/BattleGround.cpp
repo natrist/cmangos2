@@ -904,7 +904,7 @@ void BattleGround::EndBattleGround(Team winner)
 
         if (!plr->IsAlive())
         {
-            plr->ResurrectPlayer(1.0f);
+            plr->Resurrect(1.0f);
             plr->SpawnCorpseBones();
         }
         else
@@ -1308,7 +1308,7 @@ void BattleGround::RemovePlayerAtLeave(ObjectGuid playerGuid, bool isOnTransport
 
         if (!player->IsAlive())                                // resurrect on exit
         {
-            player->ResurrectPlayer(1.0f);
+            player->Resurrect(1.0f);
             player->SpawnCorpseBones();
         }
     }
