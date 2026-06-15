@@ -4927,7 +4927,7 @@ void Player::BuildPlayerRepop()
     FailQuestsOnDeath(); // confirmed to be on release
 }
 
-void Player::ResurrectPlayer(float restore_percent, bool applySickness)
+void Player::Resurrect(float restore_percent)
 {
     // case when player is ghouled (raise ally)
     if (IsGhouled())
@@ -4981,33 +4981,6 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
         if (InstanceData* instanceData = GetMap()->GetInstanceData())
             instanceData->OnPlayerResurrect(this);
     }
-
-    if (!applySickness)
-        return;
-
-    // Characters from level 1-10 are not affected by resurrection sickness.
-    // Characters from level 11-19 will suffer from one minute of sickness
-    // for each level they are above 10.
-    // Characters level 20 and up suffer from ten minutes of sickness.
-    int32 startLevel = sWorld.getConfig(CONFIG_INT32_DEATH_SICKNESS_LEVEL);
-
-    if (int32(GetLevel()) >= startLevel)
-    {
-        // set resurrection sickness
-        CastSpell(this, SPELL_ID_PASSIVE_RESURRECTION_SICKNESS, TRIGGERED_OLD_TRIGGERED);
-
-        // not full duration
-        if (int32(GetLevel()) < startLevel + 9)
-        {
-            int32 delta = (int32(GetLevel()) - startLevel + 1) * MINUTE;
-
-            if (SpellAuraHolder* holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
-            {
-                holder->SetAuraDuration(delta * IN_MILLISECONDS);
-                holder->SendAuraUpdate(false);
-            }
-        }
-    }
 }
 
 std::pair<bool, AreaTrigger const*> Player::CheckAndRevivePlayerOnDungeonEnter(MapEntry const* targetMapEntry, uint32 targetMapId)
@@ -5051,7 +5024,7 @@ std::pair<bool, AreaTrigger const*> Player::CheckAndRevivePlayerOnDungeonEnter(M
     }
 
     // now we can resurrect player, and then check teleport requirements
-    ResurrectPlayer(0.5f);
+    Resurrect(0.5f);
     SpawnCorpseBones();
     return { true, resultingAt };
 }
@@ -5387,7 +5360,7 @@ void Player::RepopAtGraveyard()
     // Such zones are considered unreachable as a ghost and the player must be automatically revived
     if ((!IsAlive() && zone && zone->flags & AREA_FLAG_NEED_FLY) || (GetTransport() && GetTransport()->IsCrossMapTransport()))
     {
-        ResurrectPlayer(0.5f);
+        Resurrect(0.5f);
         SpawnCorpseBones();
     }
 
@@ -6953,6 +6926,30 @@ void Player::SendMessageToAllWhoSeeMe(WorldPacket const& data, bool self) const
 
     if (self)
         GetSession()->SendPacket(data);
+}
+
+void Player::ApplyResurrectionSickness()
+{
+    // Characters above level 10 will suffer resurrection sickness for 1 minute
+    // for each subsequent level, up to a maximum of 10 minutes at level 20.
+    
+    int32_t level = GetLevel();
+
+    if (level > 10) {
+        CastSpell(this, SPL_RESURRECTION_SICKNESS, TRIGGERED_OLD_TRIGGERED);
+
+        // Lower the duration of the Resurrection Sickness aura
+        // if we're within the reduced effect level threshold.
+        if (level < 20) {
+            int32_t newDuration = (level - 10) * 60000;
+
+            SpellAuraHolder* holder = GetSpellAuraHolder(SPL_RESURRECTION_SICKNESS);
+            if (holder) {
+                holder->SetAuraDuration(newDuration);
+                holder->SendAuraUpdate(false);
+            }
+        }
+    }
 }
 
 void Player::SendDirectMessage(WorldPacket const& data) const
@@ -17271,7 +17268,7 @@ void Player::LoadCorpse()
         else
         {
             // Prevent Dead Player login without corpse
-            ResurrectPlayer(0.5f);
+            Resurrect(0.5f);
         }
     }
 }
@@ -22608,7 +22605,7 @@ void Player::ResurrectUsingRequestDataInit()
 
 void Player::ResurrectUsingRequestDataFinish()
 {
-    ResurrectPlayer(0.0f, false);
+    Resurrect(0.0f);
 
     if (GetMaxHealth() > m_resurrectHealth)
         SetHealth(m_resurrectHealth);
