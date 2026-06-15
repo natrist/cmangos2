@@ -669,7 +669,7 @@ void VehicleInfo::TeleportPassengers(uint32 mapId)
     for (auto player : players)
     {
         if (player->IsDead() && !player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
-            player->ResurrectPlayer(1.0);
+            player->Resurrect(1.0);
         UnBoard(player, true);
         player->TeleportTo(mapId, pos.x, pos.y, pos.z, pos.o, TELE_TO_NOT_LEAVE_TRANSPORT, nullptr, transport);
     }
