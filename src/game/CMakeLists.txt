@@ -40,6 +40,24 @@ if(NOT BUILD_SCRIPTDEV)
   endforeach()
 endif()
 
+# Eluna lives in src/LuaScript (submodule), not under src/game.
+if(BUILD_ELUNA)
+  set(ELUNA_DIR "${CMAKE_SOURCE_DIR}/src/LuaScript")
+  file(GLOB_RECURSE ELUNA_SRCS
+    "${ELUNA_DIR}/*.h"
+    "${ELUNA_DIR}/*.cpp"
+    "${ELUNA_DIR}/*.hpp"
+  )
+  # Keep only the CMaNGOS method backend; drop other cores, docs, and optional modules
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/methods/Mangos/")
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/methods/VMangos/")
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/methods/TrinityCore/")
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/methods/AzerothCore/")
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/docs/")
+  list(FILTER ELUNA_SRCS EXCLUDE REGEX "/modules/")
+  list(APPEND LIBRARY_SRCS ${ELUNA_SRCS})
+endif()
+
 if(NOT BUILD_DEPRECATED_PLAYERBOT)
   # exclude Playerbot folder
   set (EXCLUDE_DIR "PlayerBot/")
