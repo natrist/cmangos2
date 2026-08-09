@@ -35,6 +35,9 @@
 #include "Maps/InstanceData.h"
 #include "Entities/Object.h"
 #include "Entities/Transports.h"
+#ifdef BUILD_ELUNA
+#include "LuaScript/LuaEngine.h"
+#endif
 
 #include <string_view>
 
