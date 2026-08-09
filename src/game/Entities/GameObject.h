@@ -861,6 +861,7 @@ class GameObject : public WorldObject
         void Respawn();
         bool IsSpawned() const;
         bool IsSpawnedByDefault() const { return m_spawnedByDefault; }
+        void SetSpawnedByDefault(bool b) { m_spawnedByDefault = b; }
         uint32 GetRespawnDelay() const override { return m_respawnDelay.count(); }
         void SetRespawnDelay(std::chrono::seconds delay, bool once = false)
         {
