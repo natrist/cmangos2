@@ -1,0 +1,4 @@
+[submodule "src/LuaScript"]
+	path = src/LuaScript
+	url = https://github.com/natrist/Eluna.git
+	branch = development
