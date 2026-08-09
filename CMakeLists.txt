@@ -212,6 +212,13 @@ endif()
 find_package(Boost 1.70.0 REQUIRED COMPONENTS program_options thread regex serialization filesystem)
 
 if (APPLE)
+    # Prefer a vendored ICU library, since the macOS SDK ships an incomplete version
+    if(NOT ICU_ROOT AND EXISTS "/opt/homebrew/opt/icu4c")
+      set(ICU_ROOT "/opt/homebrew/opt/icu4c")
+    elseif(NOT ICU_ROOT AND EXISTS "/usr/local/opt/icu4c")
+      set(ICU_ROOT "/usr/local/opt/icu4c")
+    endif()
+
     find_package(ICU COMPONENTS uc i18n data REQUIRED)
     add_library(icuuc ALIAS ICU::uc)
     add_library(icui18n ALIAS ICU::i18n)
