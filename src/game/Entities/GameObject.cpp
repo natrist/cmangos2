@@ -1510,7 +1510,9 @@ bool GameObject::CanUseNow(Player const* player) const
             }
             break;
         }
-        default: break;
+
+        default:
+            break;
     }
 
     if (!GetGOInfo()->GetLockId())
