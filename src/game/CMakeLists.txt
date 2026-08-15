@@ -21,7 +21,13 @@ set(LIBRARY_NAME game)
 add_definitions(-DDT_POLYREF64)
 add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
 
-# Find all the input files
+# Generated under ${CMAKE_BINARY_DIR}/src/JamAutoCode (from Jam/CMakeLists).
+if(NOT JAM_GENERATED_FILES)
+    message(FATAL_ERROR "JAM_GENERATED_FILES not set — add_subdirectory(Jam) before game")
+endif()
+set_source_files_properties(${JAM_GENERATED_FILES} PROPERTIES GENERATED TRUE)
+
+# Find all the input files.
 FILE(GLOB_RECURSE LIBRARY_SRCS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.h" "*.cpp")
 
 # Remove Anticheat.cpp.
@@ -101,12 +107,20 @@ foreach(source ${LIBRARY_SRCS})
     source_group("${source_path_msvc}" FILES "${source}")
 endforeach()
 
+source_group("JamAutoCode (generated)" FILES ${JAM_GENERATED_FILES})
+
 add_library(${LIBRARY_NAME} STATIC
   ${LIBRARY_SRCS}
+  ${JAM_GENERATED_FILES}
 )
+
+if(TARGET JamGenAll)
+    add_dependencies(${LIBRARY_NAME} JamGenAll)
+endif()
 
 target_link_libraries(${LIBRARY_NAME}
   PRIVATE shared
+  PUBLIC jam
   PRIVATE g3dlite
   PRIVATE Detour
   PRIVATE zlib
