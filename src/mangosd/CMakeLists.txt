@@ -55,6 +55,7 @@ add_executable(${EXECUTABLE_NAME}
 target_link_libraries(${EXECUTABLE_NAME}
   shared
   game
+  user
   gsoap
   g3dlite
   cmangos-compile-option-interface
