@@ -25,6 +25,9 @@
 #include "Server/WorldSocket.h"                                    // must be first to make ACE happy with ACE includes in it
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
+#include "Services/WowConnection.h"
+#include "JamAutoCode/JamUserClient.h"
+#include "JamAutoCode/JamPlayerCli.h"
 #include "Log/Log.h"
 #include "Server/Opcodes.h"
 #include "Server/WorldPacket.h"
@@ -373,6 +376,37 @@ void WorldSession::ProcessByteBufferException(WorldPacket const& packet)
     }
 }
 
+bool WorldSession::ProcessMessage(WorldPacket& packet)
+{
+    try
+    {
+        WowConnection conn(this);
+
+        if (JamUserClient::Dispatch(&conn, packet))
+            return true;
+        if (JamPlayerCli::Dispatch(&conn, packet))
+            return true;
+        return false;
+    }
+    catch (const ByteBufferException&)
+    {
+        ProcessByteBufferException(packet);
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        sLog.outError("JAM: exception handling packet (opcode 0x%04x) from %s: %s",
+                      packet.GetOpcode(), GetRemoteAddress().c_str(), e.what());
+        return true;
+    }
+    catch (...)
+    {
+        sLog.outError("JAM: unknown exception handling packet (opcode 0x%04x) from %s",
+                      packet.GetOpcode(), GetRemoteAddress().c_str());
+        return true;
+    }
+}
+
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 /*diff*/)
 {
@@ -399,6 +433,9 @@ bool WorldSession::Update(uint32 /*diff*/)
 
         auto const packet = std::move(recvQueueCopy.front());
         recvQueueCopy.pop_front();
+
+        if (ProcessMessage(*packet))
+            continue;
 
         OpcodeHandler const& opHandle = opcodeTable[packet->GetOpcode()];
         switch (opHandle.status)

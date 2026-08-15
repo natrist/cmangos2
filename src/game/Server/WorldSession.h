@@ -365,6 +365,7 @@ class WorldSession
         void DeleteMovementPackets();
 
         bool Update(uint32 diff);
+        bool ProcessMessage(WorldPacket& packet);
         void UpdateMap(uint32 diff);
 
         /// Handle the authentication waiting queue (to be completed)
@@ -565,7 +566,6 @@ class WorldSession
         void HandleLootMasterGiveOpcode(WorldPacket& recvPacket);
         void HandleWhoOpcode(WorldPacket& recvPacket);
         void HandleLogoutRequestOpcode(WorldPacket& recvPacket);
-        void HandlePlayerLogoutOpcode(WorldPacket& recvPacket);
         void HandleLogoutCancelOpcode(WorldPacket& recvPacket);
 
         void HandleGMTicketSystemStatusOpcode(WorldPacket& recvPacket);
@@ -886,7 +886,6 @@ class WorldSession
         void HandleBattlemasterJoinArena(WorldPacket& recv_data);
         void HandleReportPvPAFK(WorldPacket& recv_data);
 
-        void HandleWorldTeleportOpcode(WorldPacket& recv_data);
         void HandleMinimapPingOpcode(WorldPacket& recv_data);
         void HandleRandomRollOpcode(WorldPacket& recv_data);
         void HandleFarSightOpcode(WorldPacket& recv_data);
