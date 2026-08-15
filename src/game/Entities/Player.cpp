@@ -17,6 +17,7 @@
  */
 
 #include "Entities/Player.h"
+#include "JamAutoCode/JamPlayerCli.h"
 #include "Tools/Language.h"
 #include "Database/DatabaseEnv.h"
 #include "Log/Log.h"
@@ -4922,6 +4923,27 @@ void Player::DeleteOldCharacters(uint32 keepDays)
         while (resultChars->NextRow());
     }
     sLog.outString();
+}
+
+static JAM_RESULT PlayerCliLogoutInstantHandler(WowConnection* conn, PlayerCliLogoutInstant* /*msg*/)
+{
+    WorldSession* session = conn->GetSession();
+    if (!session)
+        return JAM_FAILED;
+
+    if (session->GetSecurity() == SEC_PLAYER)
+    {
+        session->SendPermissionFailure();
+        return JAM_FAILED;
+    }
+
+    session->LogoutPlayer();
+    return JAM_OK;
+}
+
+void Player::InstallJamHandlers()
+{
+    PlayerCliLogoutInstant::s_handler = PlayerCliLogoutInstantHandler;
 }
 
 /* Preconditions:
