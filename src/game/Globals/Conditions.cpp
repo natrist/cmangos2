@@ -1093,7 +1093,7 @@ uint32 ConditionEntry::UsesSpell() const
             }
             return false;
         }
-        case CONDITION_AURA:
+        case CONDITION_AURA: {
             return m_value1;
         default: break;
     }
