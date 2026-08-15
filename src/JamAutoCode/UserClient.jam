@@ -1,0 +1,13 @@
+inbound {
+    message UserClientWorldTeleport [code = 0x8] {
+        u32 time;
+        u32 mapId;
+        u64 characterGUID;
+        C3Vector position;
+        float facing;
+    }
+
+    message UserClientGmResurrect [code = 0x22A] {
+        string name[49];
+    }
+}
