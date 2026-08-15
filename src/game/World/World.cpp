@@ -31,6 +31,7 @@
 #include "Server/WorldSession.h"
 #include "Server/WorldPacket.h"
 #include "Entities/Player.h"
+
 #include "Skills/SkillExtraItems.h"
 #include "Skills/SkillDiscovery.h"
 #include "Accounts/AccountMgr.h"
@@ -1635,6 +1636,8 @@ void World::SetInitialWorldSettings()
         GetEluna()->OnConfigLoad(false); // Must be done after Eluna is initialized and scripts have run
     sLog.outString();
 #endif
+
+    Player::InstallJamHandlers();
 
     sLog.outString("---------------------------------------");
     sLog.outString("      CMANGOS: World initialized       ");
