@@ -35,6 +35,7 @@
 #include "MaNGOSsoap.h"
 #include "Mails/MassMailMgr.h"
 #include "Server/DBCStores.h"
+#include "UserService.h"
 
 #include "Config/Config.h"
 #include "Database/DatabaseEnv.h"
@@ -121,6 +122,8 @@ int Master::Run()
         Log::WaitBeforeContinueIfNeed();
         return 1;
     }
+
+    UserService::Initialize();
 
     ///- Initialize the World
     sWorld.SetInitialWorldSettings();
