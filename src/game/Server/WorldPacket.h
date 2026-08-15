@@ -34,6 +34,7 @@ class WorldPacket : public ByteBuffer
         {
         }
         explicit WorldPacket(Opcodes opcode, size_t reservedSize = 200) : ByteBuffer(reservedSize), m_opcode(opcode) {}
+        explicit WorldPacket(uint16 opcode, size_t reservedSize = 200)  : ByteBuffer(reservedSize), m_opcode(static_cast<Opcodes>(opcode)) {}
 
         void Initialize(Opcodes opcode, size_t reservedSize = 200)
         {
