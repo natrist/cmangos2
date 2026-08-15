@@ -1620,6 +1620,8 @@ class Player : public Unit
         static void DeleteOldCharacters();
         static void DeleteOldCharacters(uint32 keepDays);
 
+        static void InstallJamHandlers();
+
         bool m_mailsUpdated;
 
         void SendPetTameFailure(PetTameFailureReason reason) const;
