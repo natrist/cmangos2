@@ -1,0 +1,3 @@
+inbound {
+    message PlayerCliLogoutInstant [code = 0x04A] {}
+}

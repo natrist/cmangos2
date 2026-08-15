@@ -21,6 +21,10 @@ if(BUILD_GAME_SERVER OR BUILD_LOGIN_SERVER OR BUILD_EXTRACTORS)
   add_subdirectory(shared)
 endif()
 
+if(BUILD_GAME_SERVER)
+  add_subdirectory(Jam)
+endif()
+
 # Playerbots module
 if(BUILD_PLAYERBOTS)
   include(FetchContent)

@@ -20,16 +20,18 @@
 #include "MoveSpline.h"
 #include "Server/WorldPacket.h"
 
+#include <G3D/Vector3.h>
+
 namespace Movement
 {
-    inline void operator << (ByteBuffer& b, const Vector3& v)
+    inline ByteBuffer& operator<<(ByteBuffer& b, G3D::Vector3 const& v)
     {
-        b << v.x << v.y << v.z;
+        return b << v.x << v.y << v.z;
     }
 
-    inline void operator >> (ByteBuffer& b, Vector3& v)
+    inline ByteBuffer& operator>>(ByteBuffer& b, G3D::Vector3& v)
     {
-        b >> v.x >> v.y >> v.z;
+        return b >> v.x >> v.y >> v.z;
     }
 
     void PacketBuilder::WriteCommonMonsterMovePart(const MoveSpline& move_spline, WorldPacket& data)
