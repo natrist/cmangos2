@@ -31,8 +31,7 @@ private:
     JamGenEnum       ParseEnum();
     JamGenField      ParseField(JamGenMessage const& currentMsg);
     void             ParseMessageAttributes(JamGenMessage& m);
-    JamGenMessage    ParseMessage(JamGenDirection dir);
-    void             ParseBlock(JamGenProtocol& p, JamGenDirection dir);
+    JamGenMessage ParseMessage();
 
     std::vector<JamGenToken> const& m_tokens;
     size_t                          m_pos = 0;
@@ -189,13 +188,12 @@ void JamGenParser::ParseMessageAttributes(JamGenMessage& m)
     Advance();
 }
 
-JamGenMessage JamGenParser::ParseMessage(JamGenDirection dir)
+JamGenMessage JamGenParser::ParseMessage()
 {
     ExpectKeyword("message");
 
     JamGenMessage m;
-    m.direction = dir;
-    m.name      = Expect(JamGenTokenType::Identifier, "message name").value;
+    m.name = Expect(JamGenTokenType::Identifier, "message name").value;
     ParseMessageAttributes(m);
     Expect(JamGenTokenType::LBrace, "{");
 
@@ -212,41 +210,28 @@ JamGenMessage JamGenParser::ParseMessage(JamGenDirection dir)
     return m;
 }
 
-void JamGenParser::ParseBlock(JamGenProtocol& p, JamGenDirection dir)
-{
-    Advance();
-    Expect(JamGenTokenType::LBrace, "{");
-
-    while (Peek().type != JamGenTokenType::RBrace)
-        p.messages.push_back(ParseMessage(dir));
-
-    Advance();
-    ConsumeOptionalSemicolon();
-}
-
 JamGenProtocol JamGenParser::ParseProtocol()
 {
     JamGenProtocol p;
 
     while (Peek().type != JamGenTokenType::EndOfFile)
     {
-        JamGenToken const& dirTok = Peek();
+        JamGenToken const& tok = Peek();
 
-        if (dirTok.type != JamGenTokenType::Identifier)
+        if (tok.type == JamGenTokenType::Identifier &&
+            (tok.value == "inbound" || tok.value == "outbound"))
         {
-            throw std::runtime_error("Expected 'inbound' or 'outbound' at line " +
-                                     std::to_string(dirTok.line));
+            throw std::runtime_error("Direction blocks are not used; list messages at file scope (line " +
+                                     std::to_string(tok.line) + ")");
         }
 
-        if (dirTok.value == "inbound")
-            ParseBlock(p, JamGenDirection::Inbound);
-        else if (dirTok.value == "outbound")
-            ParseBlock(p, JamGenDirection::Outbound);
-        else
+        if (tok.type != JamGenTokenType::Identifier || tok.value != "message")
         {
-            throw std::runtime_error("Expected 'inbound' or 'outbound' at line " +
-                                     std::to_string(dirTok.line) + ", got '" + dirTok.value + "'");
+            throw std::runtime_error("Expected 'message' at line " +
+                                     std::to_string(tok.line) + ", got '" + tok.value + "'");
         }
+
+        p.messages.push_back(ParseMessage());
     }
 
     return p;
