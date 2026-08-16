@@ -282,10 +282,6 @@ static void EmitSizeField(std::ostringstream& os, JamGenMessage const& m, JamGen
     }
 }
 
-// Blizzard-style message:
-//   Foo(conn, packet)  // ctor unpacks
-//   Foo::CallHandler() // s_handler(conn, this)
-//   JamFoo::Dispatch   // switch that constructs + CallHandler
 static void EmitMessageClass(std::ostringstream& os, JamGenMessage const& m)
 {
     os << s_notice;
@@ -300,20 +296,13 @@ static void EmitMessageClass(std::ostringstream& os, JamGenMessage const& m)
         os << "    };\n\n";
     }
 
-    if (m.direction == JamGenDirection::Inbound)
-    {
-        os << "    using HandlerFn = JAM_RESULT (*)(WowConnection* conn, " << m.name << "* msg);\n";
-        os << "    static HandlerFn s_handler;\n\n";
-        os << "    " << m.name << "(WowConnection* conn, WorldPacket& packet);\n";
-        os << "    JAM_RESULT CallHandler();\n\n";
-        os << "    void Get(ByteBuffer& data) override;\n";
-    }
-    else
-    {
-        os << "    " << m.name << "() = default;\n\n";
-        os << "    void Put(ByteBuffer& data) const override;\n";
-    }
-
+    os << "    using HandlerFn = JAM_RESULT (*)(WowConnection* conn, " << m.name << "* msg);\n";
+    os << "    static HandlerFn s_handler;\n\n";
+    os << "    " << m.name << "() = default;\n";
+    os << "    " << m.name << "(WowConnection* conn, WorldPacket& packet);\n";
+    os << "    JAM_RESULT CallHandler();\n\n";
+    os << "    void Get(ByteBuffer& data) override;\n";
+    os << "    void Put(ByteBuffer& data) const override;\n";
     os << "    u16         GetCode() const override { return CODE; }\n";
     os << "    char const* GetName() const override { return \"" << m.name << "\"; }\n";
     os << "    u32         GetSize() const override;\n\n";
@@ -330,33 +319,28 @@ static void EmitMessageMethods(std::ostringstream& os, JamGenMessage const& m)
 {
     os << s_notice;
 
-    if (m.direction == JamGenDirection::Inbound)
-    {
-        os << m.name << "::HandlerFn " << m.name << "::s_handler = nullptr;\n\n";
+    os << m.name << "::HandlerFn " << m.name << "::s_handler = nullptr;\n\n";
 
-        os << m.name << "::" << m.name << "(WowConnection* conn, WorldPacket& packet)\n";
-        os << "    : JamMessage(conn)\n{\n";
-        os << "    Get(packet);\n";
-        os << "}\n\n";
+    os << m.name << "::" << m.name << "(WowConnection* conn, WorldPacket& packet)\n";
+    os << "    : JamMessage(conn)\n{\n";
+    os << "    Get(packet);\n";
+    os << "}\n\n";
 
-        os << "JAM_RESULT " << m.name << "::CallHandler()\n{\n";
-        os << "    if (!s_handler)\n";
-        os << "        return JAM_FAILED;\n";
-        os << "    return s_handler(m_connection, this);\n";
-        os << "}\n\n";
+    os << "JAM_RESULT " << m.name << "::CallHandler()\n{\n";
+    os << "    if (!s_handler)\n";
+    os << "        return JAM_FAILED;\n";
+    os << "    return s_handler(m_connection, this);\n";
+    os << "}\n\n";
 
-        os << "void " << m.name << "::Get(ByteBuffer& data)\n{\n";
-        for (JamGenField const& f : m.fields)
-            EmitReadField(os, m, f);
-        os << "}\n\n";
-    }
-    else
-    {
-        os << "void " << m.name << "::Put(ByteBuffer& data) const\n{\n";
-        for (JamGenField const& f : m.fields)
-            EmitWriteField(os, m, f);
-        os << "}\n\n";
-    }
+    os << "void " << m.name << "::Get(ByteBuffer& data)\n{\n";
+    for (JamGenField const& f : m.fields)
+        EmitReadField(os, m, f);
+    os << "}\n\n";
+
+    os << "void " << m.name << "::Put(ByteBuffer& data) const\n{\n";
+    for (JamGenField const& f : m.fields)
+        EmitWriteField(os, m, f);
+    os << "}\n\n";
 
     os << "u32 " << m.name << "::GetSize() const\n{\n";
     os << "    u32 n = " << MessageFixedSize(m) << ";\n";
@@ -376,14 +360,12 @@ static std::string EmitHeader(std::string const& fileName, std::string const& cl
     os << "#include \"JamAutoCode/JamMessage.h\"\n";
     os << "#include \"Jam/JamDynamicString.h\"\n";
     os << "#include \"Jam/JamDynamicArray.h\"\n\n";
-
-    if (p.HasInbound())
-        os << "class WorldPacket;\n\n";
+    os << "class WorldPacket;\n\n";
 
     for (JamGenMessage const& m : p.messages)
         EmitMessageClass(os, m);
 
-    if (p.HasInbound())
+    if (!p.messages.empty())
     {
         os << s_notice;
         os << "class Jam" << classPrefix << "\n{\npublic:\n";
@@ -405,7 +387,7 @@ static std::string EmitSource(std::string const& fileName, std::string const& cl
     for (JamGenMessage const& m : p.messages)
         EmitMessageMethods(os, m);
 
-    if (!p.HasInbound())
+    if (p.messages.empty())
         return os.str();
 
     os << s_notice;
@@ -414,9 +396,6 @@ static std::string EmitSource(std::string const& fileName, std::string const& cl
 
     for (JamGenMessage const& m : p.messages)
     {
-        if (m.direction != JamGenDirection::Inbound)
-            continue;
-
         os << "        case " << m.name << "::CODE:\n";
         os << "        {\n";
         os << "            " << m.name << " msg(conn, packet);\n";
