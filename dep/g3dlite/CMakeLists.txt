@@ -136,3 +136,7 @@ target_include_directories(${LIBRARY_NAME}
 if(MSVC)
   set_target_properties(${LIBRARY_NAME} PROPERTIES FOLDER "Dependencies")
 endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  target_compile_options(${LIBRARY_NAME} PUBLIC -Wno-ignored-attributes)
+endif()
