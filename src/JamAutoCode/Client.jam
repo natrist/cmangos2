@@ -1,5 +1,3 @@
-outbound {
-    message ClientGmResurrectFailed [code = 0x252] {
-        i32 failed;
-    }
+message ClientGmResurrectFailed [code = 0x252] {
+    i32 failed;
 }

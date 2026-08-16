@@ -55,12 +55,6 @@ inline bool JamGenIsBuiltinType(std::string_view t)
 }
 
 
-enum class JamGenDirection
-{
-    Inbound,
-    Outbound,
-};
-
 struct JamGenField
 {
     std::string typeName;
@@ -86,8 +80,7 @@ struct JamGenEnum
 struct JamGenMessage
 {
     std::string              name;
-    uint32_t                 code      = 0;
-    JamGenDirection          direction = JamGenDirection::Inbound;
+    uint32_t                 code = 0;
     std::vector<JamGenEnum>  enums;
     std::vector<JamGenField> fields;
 
@@ -112,16 +105,6 @@ struct JamGenMessage
 struct JamGenProtocol
 {
     std::vector<JamGenMessage> messages;
-
-    bool HasInbound() const
-    {
-        for (JamGenMessage const& m : messages)
-        {
-            if (m.direction == JamGenDirection::Inbound)
-                return true;
-        }
-        return false;
-    }
 };
 
 
