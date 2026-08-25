@@ -10131,7 +10131,7 @@ void Unit::SetDeathState(DeathState s)
         RemoveMiniPet();
         UnsummonAllTotems();
 
-        StopMoving();
+        InterruptMoving();
         i_motionMaster.Clear(false, true);
         if (!CanFly() || !i_motionMaster.MoveFall())
             i_motionMaster.MoveIdle();
@@ -11606,10 +11606,59 @@ void Unit::SendPetDismiss(uint32 soundId) const
 
 ///----------End of Pet responses methods----------
 
+void Unit::StampSplineTime()
+{
+    // Wall clock, not World::GetCurrentClockTime(): that value is frozen for the whole tick.
+    m_lastSplineTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+}
+
+void Unit::AdvanceSplineToNow()
+{
+    if (movespline->Finalized())
+        return;
+
+    // Server spline time only advances in Unit::Update; the client interpolates continuously.
+    if (m_lastSplineTime != TimePoint())
+    {
+        TimePoint const now = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+        if (now > m_lastSplineTime)
+        {
+            uint64 const elapsed = uint64(std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastSplineTime).count());
+            if (elapsed)
+            {
+                uint32 const dt = elapsed > 5000 ? 5000 : uint32(elapsed);
+                movespline->updateState(dt);
+                m_lastSplineTime = now;
+            }
+        }
+    }
+
+    UpdateSplinePosition(true);
+
+    // Walking splines follow navmesh Z, which sits a few inches above ADT/VMap ground.
+    // The client visually rests the model on terrain after the spline stops; match that.
+    if (!IsInWorld() || CanFly() || IsFlying() || hasUnitState(UNIT_STAT_PROPELLED))
+        return;
+    if (m_movementInfo.HasMovementFlag(MovementFlags(MOVEFLAG_FLYING | MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR | MOVEFLAG_SWIMMING | MOVEFLAG_LEVITATING)))
+        return;
+
+    float x = GetPositionX();
+    float y = GetPositionY();
+    float z = GetPositionZ();
+    float const splineZ = z;
+    UpdateAllowedPositionZ(x, y, z);
+    float const dz = fabs(z - splineZ);
+    if (dz > 0.001f && dz < 0.5f)
+        Relocate(x, y, z, GetOrientation());
+}
+
 void Unit::StopMoving(bool forceSendStop /*=false*/)
 {
     if (IsStopped() && !forceSendStop)
         return;
+
+    if (!movespline->Finalized())
+        AdvanceSplineToNow();
 
     clearUnitState(UNIT_STAT_MOVING);
 
@@ -11636,7 +11685,7 @@ void Unit::InterruptMoving(bool forceSendStop /*=false*/)
 
     if (!movespline->Finalized())
     {
-        UpdateSplinePosition(true);
+        AdvanceSplineToNow();
 
         movespline->_Interrupt();
         isMoving = true;
@@ -12968,6 +13017,7 @@ void Unit::UpdateSplineMovement(uint32 t_diff)
     }, 1000);
 #endif
     movespline->updateState(t_diff);
+    StampSplineTime();
     bool arrived = movespline->Finalized();
 
     if (arrived)
@@ -12995,6 +13045,8 @@ void Unit::UpdateSplinePosition(bool relocateOnly)
         m_movementInfo.UpdateTransportData(pos);
         transportInfo->CalculatePassengerPosition(pos.x, pos.y, pos.z, &pos.o);
     }
+
+    pos.z += GetHoverOffset();
 
     bool faced = false;
     if (movespline->isFacing())

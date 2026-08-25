@@ -124,6 +124,7 @@ namespace Movement
         unit.m_movementInfo.SetMovementFlags(MovementFlags(moveFlags));
 
         move_spline.Initialize(args);
+        unit.StampSplineTime();
 
         WorldPacket data(SMSG_MONSTER_MOVE, 64);
         data << unit.GetPackGUID();

@@ -2490,6 +2490,8 @@ class Unit : public WorldObject
         void StopMoving(bool forceSendStop = false);
         void UpdateMoving(); // special vehicle update movement case - confirmed after CMSG_DISMISS_CONTROLLED_VEHICLE
         void InterruptMoving(bool forceSendStop = false);
+        void StampSplineTime();
+        void AdvanceSplineToNow();
 
         ///----------Various crowd control methods-----------------
         inline bool IsCrowdControlled() const { return HasFlag(UNIT_FIELD_FLAGS, (UNIT_FLAG_CONFUSED | UNIT_FLAG_FLEEING | UNIT_FLAG_STUNNED)); }
@@ -2925,6 +2927,7 @@ class Unit : public WorldObject
         bool m_chainImmune;
 
         TimePoint m_lastMoveTime; // used for resetting combat timer on melee
+        TimePoint m_lastSplineTime; // last time movespline->updateState ran, for death/interrupt sync
 
     private:                                                // Error traps for some wrong args using
         // this will catch and prevent build for any cases when all optional args skipped and instead triggered used non boolean type
