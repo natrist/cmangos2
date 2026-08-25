@@ -585,6 +585,7 @@ enum NPCFlags
 namespace Movement
 {
     class MoveSpline;
+    class MoveSplineInit;
 }
 
 /**
@@ -2852,8 +2853,13 @@ class Unit : public WorldObject
         uint32 GetOverridenMountId() const { return m_overridenMountId; }
 
     private:
+        friend class Movement::MoveSplineInit;
+
         void CleanupDeletedAuras();
         void UpdateSplineMovement(uint32 t_diff);
+        void SetLastSplineStepTime() { m_lastSplineStepTime = WorldTimer::getMSTime(); }
+        void StepMoveSpline();
+        void CalcZForCurrentSpecialSpline();
 
         // player or player's pet
         float GetCombatRatingReduction(CombatRating cr) const;
@@ -2925,6 +2931,7 @@ class Unit : public WorldObject
         bool m_chainImmune;
 
         TimePoint m_lastMoveTime; // used for resetting combat timer on melee
+        uint32 m_lastSplineStepTime; // live clock of last spline step (not world tick); 0 = never
 
     private:                                                // Error traps for some wrong args using
         // this will catch and prevent build for any cases when all optional args skipped and instead triggered used non boolean type
