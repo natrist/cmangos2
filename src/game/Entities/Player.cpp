@@ -3092,7 +3092,10 @@ void Player::GiveLevel(uint32 level)
     // update level, max level of skills
     m_Played_time[PLAYED_TIME_LEVEL] = 0;                   // Level Played Time reset
 
-    _ApplyAllLevelScaleItemMods(false);
+    if (level < oldLevel)
+        _RemoveAllItemMods();
+    else
+        _ApplyAllLevelScaleItemMods(false);
 
     SetLevel(level);
 
@@ -3119,7 +3122,10 @@ void Player::GiveLevel(uint32 level)
     if (GetPower(POWER_RAGE) > GetMaxPower(POWER_RAGE))
         SetPower(POWER_RAGE, GetMaxPower(POWER_RAGE));
 
-    _ApplyAllLevelScaleItemMods(true);
+    if (level < oldLevel)
+        _ApplyAllItemMods();
+    else
+        _ApplyAllLevelScaleItemMods(true);
 
     // update level to hunter/summon pet
     if (Pet* pet = GetPet())
@@ -8064,6 +8070,117 @@ void Player::DuelComplete(DuelCompleteType type)
 
 //---------------------------------------------------------//
 
+void Player::AddItemsSetItem(Item* item)
+{
+    ItemPrototype const* proto = item->GetProto();
+    if (!proto || !proto->ItemSet)
+        return;
+
+    uint32 setid = proto->ItemSet;
+
+    ItemSetEntry const* set = sItemSetStore.LookupEntry(setid);
+
+    if (!set)
+    {
+        sLog.outErrorDb("Item set %u for item (id %u) not found, mods not applied.", setid, proto->ItemId);
+        return;
+    }
+
+    if (set->required_skill_id && GetSkillValue(set->required_skill_id) < set->required_skill_value)
+        return;
+
+    ItemSetEffect* eff = GetItemSetEffect(setid);
+
+    if (!eff)
+        eff = AddItemSetEffect(setid);
+
+    ++eff->item_count;
+
+    for (uint32 x = 0; x < 8; ++x)
+    {
+        if (!set->spells[x])
+            continue;
+        // not enough for  spell
+        if (set->items_to_triggerspell[x] > eff->item_count)
+            continue;
+
+        uint32 z = 0;
+        for (; z < 8; ++z)
+            if (eff->spells[z] && eff->spells[z]->Id == set->spells[x])
+                break;
+
+        if (z < 8)
+            continue;
+
+        // new spell
+        for (auto& spell : eff->spells)
+        {
+            if (!spell)                            // free slot
+            {
+                SpellEntry const* spellInfo = sSpellTemplate.LookupEntry<SpellEntry>(set->spells[x]);
+                if (!spellInfo)
+                {
+                    sLog.outError("WORLD: unknown spell id %u in items set %u effects", set->spells[x], setid);
+                    break;
+                }
+
+                // spell casted only if fit form requirement, in other case will casted at form change
+                ApplyEquipSpell(spellInfo, nullptr, true);
+                spell = spellInfo;
+                break;
+            }
+        }
+    }
+}
+
+void Player::RemoveItemsSetItem(ItemPrototype const* proto)
+{
+    if (!proto || !proto->ItemSet)
+        return;
+
+    uint32 setid = proto->ItemSet;
+
+    ItemSetEntry const* set = sItemSetStore.LookupEntry(setid);
+
+    if (!set)
+    {
+        sLog.outErrorDb("Item set #%u for item #%u not found, mods not removed.", setid, proto->ItemId);
+        return;
+    }
+
+    ItemSetEffect* eff = GetItemSetEffect(setid);
+
+    // can be in case now enough skill requirement for set appling but set has been appliend when skill requirement not enough
+    if (!eff)
+        return;
+
+    --eff->item_count;
+
+    for (uint32 x = 0; x < 8; ++x)
+    {
+        if (!set->spells[x])
+            continue;
+
+        // enough for spell
+        if (set->items_to_triggerspell[x] <= eff->item_count)
+            continue;
+
+        for (auto& spell : eff->spells)
+        {
+            if (spell && spell->Id == set->spells[x])
+            {
+                // spell can be not active if not fit form requirement
+                ApplyEquipSpell(spell, nullptr, false);
+                spell = nullptr;
+                break;
+            }
+        }
+    }
+
+    if (!eff->item_count)                                   // all items of a set were removed
+        RemoveItemSetEffect(setid);
+}
+
 void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply)
 {
     if (slot >= INVENTORY_SLOT_BAG_END || !item)
@@ -8074,8 +8191,10 @@ void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply)
         return;
 
     ItemPrototype const* proto = item->GetProto();
-
     if (!proto)
+        return;
+
+    if (CanUseItem(proto) != EQUIP_ERR_OK)
         return;
 
     DETAIL_LOG("applying mods for item %u ", item->GetGUIDLow());
@@ -8593,7 +8712,7 @@ void Player::UpdateEquipSpellsAtFormChange()
 {
     for (int i = 0; i < INVENTORY_SLOT_BAG_END; ++i)
     {
-        if (m_items[i] && !m_items[i]->IsBroken())
+        if (m_items[i] && !m_items[i]->IsBroken() && CanUseItem(m_items[i]->GetProto()) == EQUIP_ERR_OK)
         {
             ApplyItemEquipSpell(m_items[i], false, true);   // remove spells that not fit to form
             ApplyItemEquipSpell(m_items[i], true, true);    // add spells that fit form but not active
@@ -8953,11 +9072,11 @@ void Player::_RemoveAllItemMods()
             if (!proto)
                 continue;
 
-            // item set bonuses not dependent from item broken state
+            // item set bonuses not dependent from item broken state or use requirements
             if (proto->ItemSet)
-                RemoveItemsSetItem(this, proto);
+                RemoveItemsSetItem(proto);
 
-            if (m_items[i]->IsBroken())
+            if (m_items[i]->IsBroken() || CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             ApplyItemEquipSpell(m_items[i], false);
@@ -8973,6 +9092,9 @@ void Player::_RemoveAllItemMods()
                 continue;
             ItemPrototype const* proto = m_items[i]->GetProto();
             if (!proto)
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             uint32 attacktype = Player::GetAttackBySlot(i);
@@ -9004,6 +9126,9 @@ void Player::_ApplyAllItemMods()
             if (!proto)
                 continue;
 
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
+                continue;
+
             uint32 attacktype = Player::GetAttackBySlot(i);
             if (attacktype < MAX_ATTACK)
                 _ApplyWeaponDependentAuraMods(m_items[i], WeaponAttackType(attacktype), true);
@@ -9023,11 +9148,14 @@ void Player::_ApplyAllItemMods()
             if (!proto)
                 continue;
 
-            // item set bonuses not dependent from item broken state
+            // item set bonuses not dependent from item broken state or use requirements
             if (proto->ItemSet)
-                AddItemsSetItem(this, m_items[i]);
+                AddItemsSetItem(m_items[i]);
 
             if (m_items[i]->IsBroken())
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             ApplyItemEquipSpell(m_items[i], true);
@@ -9049,6 +9177,9 @@ void Player::_ApplyAllLevelScaleItemMods(bool apply)
 
             ItemPrototype const* proto = m_items[i]->GetProto();
             if (!proto)
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             _ApplyItemBonuses(proto, i, apply, true);
@@ -11920,7 +12051,7 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
 
             // item set bonuses applied only at equip and removed at unequip, and still active for broken items
             if (pProto && pProto->ItemSet)
-                AddItemsSetItem(this, pItem);
+                AddItemsSetItem(pItem);
 
             _ApplyItemMods(pItem, slot, true);
 
@@ -12109,11 +12240,8 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
         {
             if (slot < INVENTORY_SLOT_BAG_END)
             {
-                ItemPrototype const* pProto = pItem->GetProto();
                 // item set bonuses applied only at equip and removed at unequip, and still active for broken items
-
-                if (pProto && pProto->ItemSet)
-                    RemoveItemsSetItem(this, pProto);
+                RemoveItemsSetItem(pItem->GetProto());
 
                 _ApplyItemMods(pItem, slot, false);
 
@@ -12268,11 +12396,8 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
             // equipment and equipped bags can have applied bonuses
             if (slot < INVENTORY_SLOT_BAG_END)
             {
-                ItemPrototype const* pProto = pItem->GetProto();
-
                 // item set bonuses applied only at equip and removed at unequip, and still active for broken items
-                if (pProto && pProto->ItemSet)
-                    RemoveItemsSetItem(this, pProto);
+                RemoveItemsSetItem(pItem->GetProto());
 
                 _ApplyItemMods(pItem, slot, false);
             }
@@ -17608,11 +17733,8 @@ void Player::_LoadInventory(std::unique_ptr<QueryResult> queryResult, uint32 tim
                 }
                 else if (IsEquipmentPos(INVENTORY_SLOT_BAG_0, slot))
                 {
-                    uint16 dest;
-                    if (CanEquipItem(slot, dest, item, false, false) == EQUIP_ERR_OK)
-                        QuickEquipItem(dest, item);
-                    else
-                        success = false;
+                    uint16 dest = uint16((INVENTORY_SLOT_BAG_0 << 8) | slot);
+                    QuickEquipItem(dest, item);
                 }
                 else if (IsBankPos(INVENTORY_SLOT_BAG_0, slot))
                 {

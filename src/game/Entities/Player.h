@@ -2181,6 +2181,8 @@ class Player : public Unit
         void _ApplyWeaponDependentAuraCritMod(Item* item, WeaponAttackType attackType, Aura* aura, bool apply);
         void _ApplyWeaponDependentAuraDamageMod(Item* item, WeaponAttackType attackType, Aura* aura, bool apply);
 
+        void AddItemsSetItem(Item* item);
+        void RemoveItemsSetItem(ItemPrototype const* proto);
         void _ApplyItemMods(Item* item, uint8 slot, bool apply);
         void _RemoveAllItemMods();
         void _ApplyAllItemMods();
@@ -3061,9 +3063,6 @@ class Player : public Unit
         bool m_pendingTaxi;
         bool m_pendingPhaseChange;
 };
-
-void AddItemsSetItem(Player* player, Item* item);
-void RemoveItemsSetItem(Player* player, ItemPrototype const* proto);
 
 // "the bodies of template functions must be made available in a header file"
 template <class T> void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, bool finalUse)

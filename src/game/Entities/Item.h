@@ -28,6 +28,7 @@ class Bag;
 class Field;
 class QueryResult;
 class Unit;
+class Player;
 
 struct ItemSetEffect
 {
