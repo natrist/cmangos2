@@ -3092,7 +3092,10 @@ void Player::GiveLevel(uint32 level)
     // update level, max level of skills
     m_Played_time[PLAYED_TIME_LEVEL] = 0;                   // Level Played Time reset
 
-    _ApplyAllLevelScaleItemMods(false);
+    if (level < oldLevel)
+        _RemoveAllItemMods();
+    else
+        _ApplyAllLevelScaleItemMods(false);
 
     SetLevel(level);
 
@@ -3119,7 +3122,10 @@ void Player::GiveLevel(uint32 level)
     if (GetPower(POWER_RAGE) > GetMaxPower(POWER_RAGE))
         SetPower(POWER_RAGE, GetMaxPower(POWER_RAGE));
 
-    _ApplyAllLevelScaleItemMods(true);
+    if (level < oldLevel)
+        _ApplyAllItemMods();
+    else
+        _ApplyAllLevelScaleItemMods(true);
 
     // update level to hunter/summon pet
     if (Pet* pet = GetPet())
@@ -8074,8 +8080,10 @@ void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply)
         return;
 
     ItemPrototype const* proto = item->GetProto();
-
     if (!proto)
+        return;
+
+    if (CanUseItem(proto) != EQUIP_ERR_OK)
         return;
 
     DETAIL_LOG("applying mods for item %u ", item->GetGUIDLow());
@@ -8593,7 +8601,7 @@ void Player::UpdateEquipSpellsAtFormChange()
 {
     for (int i = 0; i < INVENTORY_SLOT_BAG_END; ++i)
     {
-        if (m_items[i] && !m_items[i]->IsBroken())
+        if (m_items[i] && !m_items[i]->IsBroken() && CanUseItem(m_items[i]->GetProto()) == EQUIP_ERR_OK)
         {
             ApplyItemEquipSpell(m_items[i], false, true);   // remove spells that not fit to form
             ApplyItemEquipSpell(m_items[i], true, true);    // add spells that fit form but not active
@@ -8953,11 +8961,11 @@ void Player::_RemoveAllItemMods()
             if (!proto)
                 continue;
 
-            // item set bonuses not dependent from item broken state
+            // item set bonuses not dependent from item broken state or use requirements
             if (proto->ItemSet)
                 RemoveItemsSetItem(this, proto);
 
-            if (m_items[i]->IsBroken())
+            if (m_items[i]->IsBroken() || CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             ApplyItemEquipSpell(m_items[i], false);
@@ -8973,6 +8981,9 @@ void Player::_RemoveAllItemMods()
                 continue;
             ItemPrototype const* proto = m_items[i]->GetProto();
             if (!proto)
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             uint32 attacktype = Player::GetAttackBySlot(i);
@@ -9004,6 +9015,9 @@ void Player::_ApplyAllItemMods()
             if (!proto)
                 continue;
 
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
+                continue;
+
             uint32 attacktype = Player::GetAttackBySlot(i);
             if (attacktype < MAX_ATTACK)
                 _ApplyWeaponDependentAuraMods(m_items[i], WeaponAttackType(attacktype), true);
@@ -9023,11 +9037,14 @@ void Player::_ApplyAllItemMods()
             if (!proto)
                 continue;
 
-            // item set bonuses not dependent from item broken state
+            // item set bonuses not dependent from item broken state or use requirements
             if (proto->ItemSet)
                 AddItemsSetItem(this, m_items[i]);
 
             if (m_items[i]->IsBroken())
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             ApplyItemEquipSpell(m_items[i], true);
@@ -9049,6 +9066,9 @@ void Player::_ApplyAllLevelScaleItemMods(bool apply)
 
             ItemPrototype const* proto = m_items[i]->GetProto();
             if (!proto)
+                continue;
+
+            if (CanUseItem(proto) != EQUIP_ERR_OK)
                 continue;
 
             _ApplyItemBonuses(proto, i, apply, true);
@@ -12023,7 +12043,8 @@ void Player::QuickEquipItem(uint16 pos, Item* pItem)
     {
         AddEnchantmentDurations(pItem);
         AddItemDurations(pItem);
-        ApplyItemOnStoreSpell(pItem, true);
+        if (CanUseItem(pItem->GetProto()) == EQUIP_ERR_OK)
+            ApplyItemOnStoreSpell(pItem, true);
 
         uint8 slot = pos & 255;
         VisualizeItem(slot, pItem);
@@ -17608,11 +17629,8 @@ void Player::_LoadInventory(std::unique_ptr<QueryResult> queryResult, uint32 tim
                 }
                 else if (IsEquipmentPos(INVENTORY_SLOT_BAG_0, slot))
                 {
-                    uint16 dest;
-                    if (CanEquipItem(slot, dest, item, false, false) == EQUIP_ERR_OK)
-                        QuickEquipItem(dest, item);
-                    else
-                        success = false;
+                    uint16 dest = uint16((INVENTORY_SLOT_BAG_0 << 8) | slot);
+                    QuickEquipItem(dest, item);
                 }
                 else if (IsBankPos(INVENTORY_SLOT_BAG_0, slot))
                 {
