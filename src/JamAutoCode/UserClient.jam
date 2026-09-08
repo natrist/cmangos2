@@ -2,7 +2,7 @@ message UserClientWorldTeleport [code = 0x8] {
     u32 time;
     u32 mapId;
     u64 characterGUID;
-    C3Vector position;
+    vector3 position;
     float facing;
 }
 

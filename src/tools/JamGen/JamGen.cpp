@@ -186,18 +186,18 @@ static void EmitFieldDecl(std::ostringstream& os, JamGenField const& f)
 
     if (f.typeName == "array")
     {
-        std::string const elem = (f.elementType == "string") ? "JamDynamicString" : f.elementType;
+        std::string const elem = (f.elementType == "string") ? "JamDynamicString" : JamGenCppType(f.elementType);
         os << "    std::vector<" << elem << "> " << f.name << ";\n";
         return;
     }
 
     if (f.size > 0)
     {
-        os << "    " << f.typeName << " " << f.name << "[" << f.size << "];\n";
+        os << "    " << JamGenCppType(f.typeName) << " " << f.name << "[" << f.size << "];\n";
         return;
     }
 
-    os << "    " << f.typeName << " " << f.name;
+    os << "    " << JamGenCppType(f.typeName) << " " << f.name;
     if (!f.defaultValue.empty())
         os << " = " << f.defaultValue;
     os << ";\n";
