@@ -38,7 +38,7 @@ inline uint32_t JamGenWireSize(std::string_view t)
     if (t == "u16" || t == "i16")                             return 2;
     if (t == "u32" || t == "i32" || t == "float")             return 4;
     if (t == "u64" || t == "i64" || t == "double")            return 8;
-    if (t == "C3Vector")                                      return 12;
+    if (t == "vector3")                                       return 12;
     return 0;
 }
 
@@ -51,7 +51,14 @@ inline bool JamGenIsIntegerType(std::string_view t)
 inline bool JamGenIsBuiltinType(std::string_view t)
 {
     return t == "string" || t == "float" || t == "double" || t == "bool"
-        || t == "char"   || t == "C3Vector" || JamGenIsIntegerType(t);
+        || t == "char"   || t == "vector3" || JamGenIsIntegerType(t);
+}
+
+inline std::string JamGenCppType(std::string_view t)
+{
+    if (t == "vector3")
+        return "C3Vector";
+    return std::string(t);
 }
 
 
