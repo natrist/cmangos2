@@ -9141,6 +9141,15 @@ bool Player::CheckAmmoCompatibility(const ItemPrototype* ammo_proto) const
     return true;
 }
 
+static void SendInsigniaLoot(Player* looter, Corpse* bones)
+{
+    // ConvertCorpseForPlayer allocates a new Corpse, so m_loot is always null here
+    bones->SetFlag(CORPSE_FIELD_DYNAMIC_FLAGS, CORPSE_DYNFLAG_LOOTABLE);
+    bones->lootRecipient = looter;
+    bones->m_loot = new Loot(looter, bones, LOOT_INSIGNIA);
+    bones->m_loot->ShowContentTo(looter);
+}
+
 /*  If in a battleground a player dies, and an enemy removes the insignia, the player's bones is lootable
     Called by remove insignia spell effect    */
 void Player::RemovedInsignia(Player* looterPlr)
@@ -9174,25 +9183,7 @@ void Player::RemovedInsignia(Player* looterPlr)
     if (!bones)
         return;
 
-    // Now we must make bones lootable, and send player loot
-    bones->SetFlag(CORPSE_FIELD_DYNAMIC_FLAGS, CORPSE_DYNFLAG_LOOTABLE);
-
-    // We store the level of our player in the gold field
-    // We retrieve this information at Player::SendLoot()
-    bones->lootRecipient = looterPlr;
-    Loot*& bonesLoot = bones->m_loot;
-    if (!bonesLoot)
-        bonesLoot = new Loot(looterPlr, bones, LOOT_INSIGNIA);
-    else
-    {
-        if (bonesLoot->GetLootType() != LOOT_INSIGNIA)
-        {
-            delete bonesLoot;
-            bonesLoot = new Loot(looterPlr, bones, LOOT_INSIGNIA);
-        }
-    }
-
-    bonesLoot->ShowContentTo(looterPlr);
+    SendInsigniaLoot(looterPlr, bones);
 }
 
 void Player::SendUpdateWorldState(uint32 Field, uint32 Value) const
@@ -19474,6 +19465,26 @@ bool Player::CanSpeak() const
     return  GetSession()->m_muteTime <= time(nullptr);
 }
 
+void Player::SkinPlayer(Player* targetPlayer)
+{
+    if (!targetPlayer)
+        return;
+
+    targetPlayer->RemovedInsignia(this);
+}
+
+void Player::SkinPlayerCorpse(Corpse* corpse)
+{
+    if (!corpse)
+        return;
+
+    Corpse* bones = sObjectAccessor.ConvertCorpseForPlayer(corpse->GetOwnerGuid(), true);
+    if (!bones)
+        return;
+
+    SendInsigniaLoot(this, bones);
+}
+
 /*********************************************************/
 /***              LOW LEVEL FUNCTIONS:Notifiers        ***/
 /*********************************************************/
@@ -22850,6 +22861,12 @@ void Player::AddResurrectRequest(ObjectGuid casterGuid, SpellEntry const* spellI
 
 void Player::SendResurrectRequest(SpellEntry const* spellInfo, bool isSpiritHealer, const char* sentName)
 {
+    // resurrectOffererGUID
+    // bytes
+    // name
+    // sickness
+    // useTimer
+
     WorldPacket data(SMSG_RESURRECT_REQUEST, (8 + 4 + strlen(sentName) + 1 + 1 + 1));
     data << m_resurrectGuid;
     data << uint32(strlen(sentName) + 1);
