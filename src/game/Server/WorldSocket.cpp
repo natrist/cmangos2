@@ -537,14 +537,12 @@ bool WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
               address.c_str());
 
     ClientOSType clientOS;
-    if (os == "Win")
+    if (os == "Win") {
         clientOS = CLIENT_OS_WIN;
-    else if (os == "OSX")
+    } else if (os == "OSX") {
         clientOS = CLIENT_OS_MAC;
-    else
-    {
+    } else {
         sLog.outError("WorldSocket::HandleAuthSession: Unrecognized OS '%s' for account '%s' from %s", os.c_str(), account.c_str(), address.c_str());
-        return false;
     }
 
     // Update the last_ip in the database
@@ -559,14 +557,12 @@ bool WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
     m_session = sWorld.FindSession(id);
 
     ClientPlatformType clientPlatform;
-    if (platform == "x86")
+    if (platform == "x86") {
         clientPlatform = CLIENT_PLATFORM_X86;
-    else if (platform == "PPC" && clientOS == CLIENT_OS_MAC)
+    } else if (platform == "PPC" && clientOS == CLIENT_OS_MAC) {
         clientPlatform = CLIENT_PLATFORM_PPC;
-    else
-    {
+    } else {
         sLog.outError("WorldSocket::HandleAuthSession: Unrecognized platform '%s' for account '%s' from %s", platform.c_str(), account.c_str(), address.c_str());
-        return false;
     }
 
     if (m_session)
